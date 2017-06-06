@@ -96,7 +96,13 @@ def fire_query_yesno(pNumber, qNumber, answerNumber):
     url = 'https://query.wikidata.org/sparql'
     query = 'ASK {wd:'+qNumber+' wdt:'+pNumber+' wd:'+answerNumber+'.}'
     data = requests.get(url, params={'query': query, 'format': 'json'}).json()
-    if data['boolean']:
+    
+    if not data:
+        #check converse relation
+        query = 'ASK {wd:'+answerNumber+' wdt:'+pNumber+' wd:'+qNumber+'.}'
+        data = requests.get(url, params={'query': query, 'format': 'json'}).json()
+    
+    if data:
         return('Yes')
     else:
         return('No')
@@ -138,19 +144,21 @@ def create_query_count(property, entity):
     if  entity and property:
         qNumber = find_entity(entity)
         pNumber = find_property(property)
+        return fire_query_count(qNumber, pNumber)
     else:
         print('Could not parse entity or property')
         return 0
-    return fire_query_count(qNumber, pNumber)
+    
 
 
 def create_query_description(entity):
     if  entity:
         qNumber = find_entity(entity)
+        return fire_query_description(qNumber)
     else:
         print('Could not parse entity or property')
         return 0
-    return fire_query_description(qNumber)
+    
 
 
 def fire_query_description(qNumber):
@@ -159,7 +167,7 @@ def fire_query_description(qNumber):
     else:
         url = 'https://query.wikidata.org/sparql'
         #query = 'SELECT ?itemLabel  WHERE {wd:'+ qNumber + ' ?item . SERVICE ?item schema:description {bd:serviceParam wikibase:language "en" .}}' #create the query from the found Q and P numbers
-        query = 'SELECT ?itemLabel WHERE {wd:' + qNumber + ' schema:description ?itemLabel . FILTER(LANG(?itemLabel) = "en")}'	#altered query, needs testing
+        query = 'SELECT ?itemLabel WHERE {wd:' + qNumber + ' schema:description ?itemLabel . FILTER(LANG(?itemLabel) = "en")}'
         data = requests.get(url, params={'query': query, 'format': 'json'}).json()
 
         if not data: #description is empty in wikidata, look for instance of attribute
@@ -184,17 +192,15 @@ def fire_query_count(qNumber, pNumber):
         query = 'SELECT ?itemLabel  WHERE {wd:'+ qNumber + ' wdt:' + pNumber + ' ?item . SERVICE wikibase:label {bd:serviceParam wikibase:language "en" .}}' #create the query from the found Q and P numbers
         data = requests.get(url, params={'query': query, 'format': 'json'}).json()
         count = 0
-        if not data['results']['bindings']: #is empty
-            #print('No results from query')
-        else:
+        if data['results']['bindings']: #is not empty
             for item in data['results']['bindings']:
                 for var in item:
-                    if isint(format(item[var]['value'])):
-                        print('{}\t'.format(item[var]['value']))
-                    else:
+                    if not isint(format(item[var]['value'])):
                         count +=1
-            if count >:
-                print (count)
+                    #else:                        
+                        #print('{}\t'.format(item[var]['value']))
+       return count
+       
 
 def parse_sentence(sentence):
     global nlp

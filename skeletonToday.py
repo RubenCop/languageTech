@@ -202,11 +202,6 @@ def fire_query_description(qNumber):
                     print('{}\t'.format(item[var]['value']))
 
 
-
-
-
-
-
 def fire_query_count(qNumber, pNumber):
     if pNumber == 'not found' or qNumber == 'not found':
         print('Could not find the answer')
@@ -342,7 +337,7 @@ def main(argv):
             questionType = determine_question_kind(line)
             print (questionType)
             if questionType == 'yes/no':
-                property, entity, answer = parse_sentence_yesno(line)
+                property, entity, answer = parse_sentence(line)#_yesno(line)
                 print ('property =' + property)
                 print ('entity = '+ entity)
                 print ('answer =' + answer)
@@ -353,7 +348,7 @@ def main(argv):
                 print(create_query_count(property, entity))
 
             elif questionType == 'description':
-                entity = parse_sentence_description(line)
+                entity = parse_sentence(line)#_description(line)
                 print(create_query_description(entity))
 
             elif questionType == 'propertyEntity':

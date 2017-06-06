@@ -96,8 +96,6 @@ def create_query_yesno(property, entity, answer):
         else:
             return fire_query_yesno2(answerNumber, entity)
 
-
-
 def fire_query_yesno(pNumber, qNumber, answerNumber):
     url = 'https://query.wikidata.org/sparql'
     query = 'ASK {wd:'+qNumber+' wdt:'+pNumber+' wd:'+answerNumber+'.}'
@@ -143,9 +141,6 @@ def fire_query_yesno2(qNumber, answer):
     
         
 
-
-
-
 def create_query_count(property, entity):
     if  entity and property:
         qNumber = find_entity(entity)
@@ -186,7 +181,6 @@ def fire_query_description(qNumber):
             for var in item:
                 #if isint(format(item[var]['value'])):
                 return item[var]['value']
-
 
 def fire_query_count(qNumber, pNumber):
     if pNumber == 'not found' or qNumber == 'not found':
@@ -236,20 +230,23 @@ def parse_sentence(sentence):
     return " ".join(property) , " ".join(entity)
 
 def parse_sentence_yesno(sentence):
-    global nlp
     result = nlp(sentence)
     entity = []
     property = []
     answer = []
     ofCheck = 0
-
     for w in result:
+        if w.dep_ == 'nsubj':
+            property.append(w.text)
+        if w.dep_ == 'pobj':
+            entity.append(w.text)
+        if w.dep_ == 'acomp' or w.dep_ == 'ccomp':
+            answer.append(w.text)
         print (w.text +' '+ w.tag_ +' '+ w.dep_+ ' '+w.head.text)
         
     #TODO    
         
     return " ".join(property) , " ".join(entity), " ".join(answer)
-
 
 def parse_sentence_description(sentence):
     global nlp
@@ -281,8 +278,6 @@ def parse_sentence_description(sentence):
         return "not found"
 
 
-
-
 def determine_question_kind(sentence):
     sentence = sentence.lower()
     if sentence.split(' ', 1)[0] == 'does' or sentence.split(' ', 1)[0] == 'is' or  sentence.split(' ', 1)[0] == 'can' or sentence.split(' ', 1)[0] == 'will' or sentence.split(' ', 1)[0] == 'are' or sentence.split(' ', 1)[0] == 'do':
@@ -305,21 +300,22 @@ def main(argv):
         # print(create_query_yesno(property, entity, answer))
 
             questionType = determine_question_kind(line)
-            print (questionType)
+            print('questionType: ',questionType)
             if questionType == 'yes/no':
                 property, entity, answer = parse_sentence_yesno(line)
                 print ('property =' + property)
                 print ('entity = '+ entity)
                 print ('answer =' + answer)
-                print(create_query_yesno(property, entity, answer))
+                print('answer: ',create_query_yesno(property, entity, answer))
 
             elif questionType == 'count':
                 property, entity = parse_sentence(line)
-                print(create_query_count(property, entity))
+                print('answer: ',create_query_count(property, entity))
 
             elif questionType == 'description':
                 entity = parse_sentence_description(line)
-                print(fire_query_description(entity))
+                entity = find_entity(entity)
+                print('answer: ',fire_query_description(entity))
 
             elif questionType == 'propertyEntity':
                 property, entity = parse_sentence(line)

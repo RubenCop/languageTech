@@ -147,18 +147,18 @@ def fire_query_description(qNumber):
         query = 'SELECT ?itemLabel WHERE {wd:' + qNumber + ' schema:description ?itemLabel . FILTER(LANG(?itemLabel) = "en")}'	#altered query, needs testing
         data = requests.get(url, params={'query': query, 'format': 'json'}).json()
 
-        if data: #description is empty in wikidata, look for instance of attribute
+        if not data: #description is empty in wikidata, look for instance of attribute
             # check P279, subclass of
             query = 'SELECT ?food ?foodLabel WHERE { wd:' + qNumber + ' wdt:P279 ?food . SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }'
             data = requests.get(url, params={'query': query, 'format': 'json'}).json()
-        if data:
+        if not data:
             #check P31, instance of
             query = 'SELECT ?food ?foodLabel WHERE { wd:' + qNumber + ' wdt:P31 ?food . SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }'
             data = requests.get(url, params={'query': query, 'format': 'json'}).json()
         for item in data['results']['bindings']:
             for var in item:
-                if isint(format(item[var]['value'])):
-                    print('{}\t'.format(item[var]['value']))
+                #if isint(format(item[var]['value'])):
+                return item[var]['value']
 
 def fire_query_count(qNumber, pNumber):
     if pNumber == 'not found' or qNumber == 'not found':
@@ -216,8 +216,11 @@ def parse_sentence_yesno(sentence):
     for w in result:
         if w.dep_ == 'nsubj':
             property.append(w.text)
+        if w.dep_ == 'pobj':
+            entity.append(w.text)
+        if w.dep_ == 'acomp' or w.dep_ == 'ccomp':
+            answer.append(w.text)
         print (w.text +' '+ w.tag_ +' '+ w.dep_+ ' '+w.head.text)
-    
     return " ".join(property) , " ".join(entity), " ".join(answer)
 
 def parse_sentence_description(sentence):
@@ -272,21 +275,22 @@ def main(argv):
         # print(create_query_yesno(property, entity, answer))
 
             questionType = determine_question_kind(line)
-            print (questionType)
+            print('questionType: ',questionType)
             if questionType == 'yes/no':
                 property, entity, answer = parse_sentence_yesno(line)
                 print ('property =' + property)
                 print ('entity = '+ entity)
                 print ('answer =' + answer)
-                print(create__query_yesno(property, entity, answer))
+                print('answer: ',create_query_yesno(property, entity, answer))
 
             elif questionType == 'count':
                 property, entity = parse_sentence(line)
-                print(create_query_count(property, entity))
+                print('answer: ',create_query_count(property, entity))
 
             elif questionType == 'description':
                 entity = parse_sentence_description(line)
-                print(create_query_description(entity))
+                entity = find_entity(entity)
+                print('answer: ',fire_query_description(entity))
 
             elif questionType == 'propertyEntity':
                 property, entity = parse_sentence(line)

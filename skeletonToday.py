@@ -214,7 +214,7 @@ def parse_sentence(sentence):
     return " ".join(property) , " ".join(entity)
 
 def parse_sentence_yesno(sentence):
-    nlp = spacy.load('en_default')
+    global nlp
     result = nlp(sentence)
     entity = []
     property = []
@@ -227,8 +227,33 @@ def parse_sentence_yesno(sentence):
 
 
 def parse_sentence_description(sentence):
-
-    return entity
+    global nlp
+    result = nlp(sentence)
+    posEntities = list()
+    
+    #we only want the nouns in the sentence, throw away verbs, adjectives etc.
+    for w in result:
+        if  w.tag_ == 'NNP' or w.tag_ == 'NN' or w.tag_ == 'NNS' or w.tag_ == 'NNPS':
+            posEntities.append(w.lemma_)
+    
+    
+    '''  work out later if needed
+    if len(posEntities) > 1:
+        #get most likely item
+        for w in posEntities:
+            
+        
+        
+    if len(posEntities) == 0:
+        #problem
+    '''
+        
+    #default
+    if len(posEntities) > 0:
+        return posEntities[0]
+    else:
+        # no entities found
+        return "not found"
 
 
 
@@ -257,7 +282,7 @@ def main(argv):
             questionType = determine_question_kind(line)
             print (questionType)
             if questionType == 'yes/no':
-                property, entity, answer = parse_sentence(line)#_yesno(line)
+                property, entity, answer = parse_sentence_yesno(line)
                 print ('property =' + property)
                 print ('entity = '+ entity)
                 print ('answer =' + answer)
@@ -268,7 +293,7 @@ def main(argv):
                 print(create_query_count(property, entity))
 
             elif questionType == 'description':
-                entity = parse_sentence(line)#_description(line)
+                entity = parse_sentence_description(line)
                 print(create_query_description(entity))
 
             elif questionType == 'propertyEntity':

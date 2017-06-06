@@ -31,7 +31,6 @@ def find_entity(entity):
     else:
         return uri_from_anchor_texts(entity)
 
-
 def find_property(property):
     url = 'https://www.wikidata.org/w/api.php'
     params = {'action':'wbsearchentities',
@@ -46,7 +45,6 @@ def find_property(property):
         return json['search'][0]['id']
     return ('not found')
 
-
 def test_ambiguation(returnQ):
     qNumber = returnQ
     pNumber = 'P31'
@@ -60,9 +58,6 @@ def create_query(property, entity):
     else:
         return('Could not parse entity or property')
     return fire_query(pNumber, qNumber)
-
-
-
 
 def fire_query(pNumber, qNumber):
     if pNumber == 'not found' or qNumber == 'not found':
@@ -79,23 +74,24 @@ def fire_query(pNumber, qNumber):
                     return('{}\t'.format(item[var]['value']))
 
 def create_query_yesno(property, entity, answer):
-    if property:
-        if  entity and property and answer:
-            qNumber = find_entity(entity)
-            pNumber = find_property(property)
-            answerNumber = find_entity(answer)
-        else:
-            print('No')
-            return 0
+    
+    #prop is known e.g. is the color of milk white?
+    if property and entity and answer:
+        qNumber = find_entity(entity)
+        pNumber = find_property(property)
+        answerNumber = find_entity(answer)
         return fire_query_yesno(pNumber,qNumber,answerNumber)
-    else:
+        
+    #prop is not known e.g. is milk white?
+    elif entity and answer:
         qNumber = find_entity(entity)
         answerNumber = find_entity(answer)
-        if fire_query_yesno2(qNumber, answer) == 'Yes':
-            return ('Yes')
-        else:
-            return fire_query_yesno2(answerNumber, entity)
-
+        return fire_query_yesno2(qNumber, answerNumber)
+        
+    #the data is incomplete
+    else:
+        return "none found"
+    
 def fire_query_yesno(pNumber, qNumber, answerNumber):
     url = 'https://query.wikidata.org/sparql'
     query = 'ASK {wd:'+qNumber+' wdt:'+pNumber+' wd:'+answerNumber+'.}'
@@ -106,7 +102,7 @@ def fire_query_yesno(pNumber, qNumber, answerNumber):
         return('No')
 
 
-def fire_query_yesno2(qNumber, answer):
+def fire_query_yesno2(qNumber, answerNumber):
     url = 'https://query.wikidata.org/sparql'
     '''
     query =  'SELECT ?valLabel WHERE { wd:'+qNumber+' ?prop ?val  SERVICE wikibase:label {bd:serviceParam wikibase:language "en"}}'
@@ -120,23 +116,20 @@ def fire_query_yesno2(qNumber, answer):
                     return ('Yes')
         return('No')
     '''
-    if not int(answer): #answer still in plain text
-        answer = find_entity(answer)
     
-    #slightly more efficient approach
-    query = 'SELECT ?food ?foodLabel WHERE { wd:' + qNumber + ' ?food wd:' + answer + ' . SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }'
+    query = 'SELECT ?food ?foodLabel WHERE { wd:' + qNumber + ' ?food wd:' + answerNumber + ' . SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }'
     data = requests.get(url, params={'query': query, 'format': 'json'}).json()
     
     if not data:
         #nothing found yet, look for converse relationship
-        query = 'SELECT ?food ?foodLabel WHERE { wd:' + answer + ' ?food wd:' + qNumber + ' . SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }'
+        query = 'SELECT ?food ?foodLabel WHERE { wd:' + answerNumber + ' ?food wd:' + qNumber + ' . SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }'
         data = requests.get(url, params={'query': query, 'format': 'json'}).json()
     
     #both normal and onverse relationship yielded nothing, answer must be no
     if not data:
         return "No"
 
-    #relationship exists between entitie and answer, return yes.
+    #relationship exists between entity and answer, return yes.
     return "Yes"
     
         
@@ -182,6 +175,7 @@ def fire_query_description(qNumber):
                 #if isint(format(item[var]['value'])):
                 return item[var]['value']
 
+
 def fire_query_count(qNumber, pNumber):
     if pNumber == 'not found' or qNumber == 'not found':
         print('Could not find the answer')
@@ -191,7 +185,7 @@ def fire_query_count(qNumber, pNumber):
         data = requests.get(url, params={'query': query, 'format': 'json'}).json()
         count = 0
         if not data['results']['bindings']: #is empty
-            print('No results from query')
+            #print('No results from query')
         else:
             for item in data['results']['bindings']:
                 for var in item:
@@ -199,7 +193,7 @@ def fire_query_count(qNumber, pNumber):
                         print('{}\t'.format(item[var]['value']))
                     else:
                         count +=1
-            if count:
+            if count >:
                 print (count)
 
 def parse_sentence(sentence):
@@ -243,8 +237,6 @@ def parse_sentence_yesno(sentence):
         if w.dep_ == 'acomp' or w.dep_ == 'ccomp':
             answer.append(w.text)
         print (w.text +' '+ w.tag_ +' '+ w.dep_+ ' '+w.head.text)
-        
-    #TODO    
         
     return " ".join(property) , " ".join(entity), " ".join(answer)
 
@@ -314,8 +306,8 @@ def main(argv):
 
             elif questionType == 'description':
                 entity = parse_sentence_description(line)
-                entity = find_entity(entity)
-                print('answer: ',fire_query_description(entity))
+                #entity = find_entity(entity)
+                print('answer: ',create_query_description(entity))
 
             elif questionType == 'propertyEntity':
                 property, entity = parse_sentence(line)
